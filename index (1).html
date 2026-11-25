@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprite Splitter</title>
+  <link rel="stylesheet" href="style (1).css">
+</head>
+
+<body>
+  <header class="topbar">
+    <h1>🧩 Sprite Splitter</h1>
+    <span class="muted">Pisahkan sprite sheet menjadi aset satuan</span>
+    <div class="spacer"></div>
+    <button id="btnTheme">🌓 Tema</button>
+  </header>
+
+  <main class="layout">
+
+    <!-- ===== Panel pengaturan (kiri) ===== -->
+    <aside class="sidebar">
+
+      <section class="card">
+        <h2>1 · Gambar</h2>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <button id="btnPick" class="full">Pilih gambar…</button>
+        <p class="muted note">Atau seret ke area pratinjau, atau tempel (Ctrl+V).</p>
+      </section>
+
+      <section class="card">
+        <h2>2 · Cara memotong</h2>
+
+        <div class="tabs">
+          <button id="tabGrid" class="active">Grid</button>
+          <button id="tabAuto">Otomatis</button>
+        </div>
+
+        <!-- Mode grid -->
+        <div id="panelGrid">
+          <label class="field">Mode grid
+            <select id="gridMode">
+              <option value="count">Jumlah kolom × baris</option>
+              <option value="size">Ukuran sel (px)</option>
+            </select>
+          </label>
+
+          <div class="row" id="gridCountFields">
+            <label class="field">Kolom
+              <input type="number" id="cols" value="4" min="1">
+            </label>
+            <label class="field">Baris
+              <input type="number" id="rows" value="4" min="1">
+            </label>
+          </div>
+
+          <div class="row" id="gridSizeFields" hidden>
+            <label class="field">Lebar sel
+              <input type="number" id="cellW" value="32" min="1">
+            </label>
+            <label class="field">Tinggi sel
+              <input type="number" id="cellH" value="32" min="1">
+            </label>
+          </div>
+
+          <div class="row">
+            <label class="field">Margin luar
+              <input type="number" id="margin" value="0" min="0">
+            </label>
+            <label class="field">Jarak antar sel
+              <input type="number" id="spacing" value="0" min="0">
+            </label>
+          </div>
+
+          <label class="check">
+            <input type="checkbox" id="skipEmpty" checked> Lewati sel kosong
+          </label>
+        </div>
+
+        <!-- Mode otomatis -->
+        <div id="panelAuto" hidden>
+          <p class="muted note">Mendeteksi tiap objek yang terpisah berdasarkan transparansi.</p>
+          <label class="field">Ambang alpha: <b id="alphaValue">10</b>
+            <input type="range" id="alphaThreshold" min="1" max="254" value="10">
+          </label>
+          <div class="row">
+            <label class="field">Gabung jarak (px)
+              <input type="number" id="mergeGap" value="2" min="0">
+            </label>
+            <label class="field">Ukuran min (px)
+              <input type="number" id="minSize" value="3" min="1">
+            </label>
+          </div>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="trimEmpty"> Pangkas ruang transparan di tiap aset
+        </label>
+        <button id="btnSplit" class="primary full" disabled>Potong sekarang</button>
+      </section>
+
+      <section class="card">
+        <h2>Hapus warna latar</h2>
+        <p class="muted note">
+          Untuk sheet tanpa transparansi: klik tombol, lalu klik warna latar di gambar.
+        </p>
+        <button id="btnEyedropper" class="full" disabled>🎯 Pilih warna latar</button>
+        <label class="field">Toleransi: <b id="toleranceValue">12</b>
+          <input type="range" id="tolerance" min="0" max="120" value="12">
+        </label>
+        <button id="btnResetBg" class="full" hidden>Kembalikan gambar asli</button>
+      </section>
+
+      <section class="card">
+        <h2>Ekspor</h2>
+        <div class="row">
+          <label class="field">Skala
+            <select id="exportScale">
+              <option>1</option>
+              <option>2</option>
+              <option>4</option>
+              <option>8</option>
+            </select>
+          </label>
+          <label class="field">Awalan nama
+            <input type="text" id="namePrefix" value="sprite">
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="includeJson" checked> Sertakan atlas JSON di ZIP
+        </label>
+        <button id="btnZip" class="primary full" disabled>⬇ Unduh terpilih (ZIP)</button>
+        <button id="btnCleanSheet" class="full" disabled>⬇ Unduh sheet bersih (PNG)</button>
+      </section>
+    </aside>
+
+    <!-- ===== Area utama (kanan) ===== -->
+    <section class="content">
+
+      <div class="card">
+        <h2>Pratinjau</h2>
+
+        <div id="dropzone" class="dropzone">
+          Seret gambar sprite sheet ke sini<br>
+          <span class="muted">PNG, JPG, GIF, WebP</span>
+        </div>
+
+        <div id="viewer" hidden>
+          <div class="toolbar">
+            <button id="btnZoomOut">−</button>
+            <span id="zoomLabel" class="muted">100%</span>
+            <button id="btnZoomIn">+</button>
+            <button id="btnZoomFit">Pas</button>
+            <span class="spacer"></span>
+            <span id="imageInfo" class="muted"></span>
+          </div>
+          <div id="stage" class="stage">
+            <canvas id="canvas"></canvas>
+          </div>
+          <p class="muted note">Klik kotak untuk memilih atau membatalkan. Hijau = terpilih.</p>
+        </div>
+      </div>
+
+      <div class="card" id="results">
+        <h2>Hasil · <span id="resultCount">0</span> aset (<span id="selectedCount">0</span> terpilih)</h2>
+        <div class="toolbar">
+          <button id="btnSelectAll">Pilih semua</button>
+          <button id="btnSelectNone">Kosongkan</button>
+          <button id="btnInvert">Balik pilihan</button>
+        </div>
+        <div id="assetList" class="asset-grid"></div>
+        <p id="emptyMessage" class="muted">
+          Belum ada hasil. Unggah gambar lalu klik “Potong sekarang”.
+        </p>
+      </div>
+
+      <div class="card" id="animCard" hidden>
+        <h2>Pratinjau animasi (aset terpilih sebagai frame)</h2>
+        <canvas id="animCanvas" width="128" height="128"></canvas>
+        <div class="toolbar center">
+          <label class="inline">FPS
+            <input type="range" id="fps" min="1" max="30" value="8">
+            <b id="fpsValue">8</b>
+          </label>
+          <button id="btnPlay">⏸ Jeda</button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- JSZip dipakai untuk membuat file ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
